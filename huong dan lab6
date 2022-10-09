@@ -1,0 +1,251 @@
+Hướng dẫn tích hợp Google Maps
+
+Truy cập https://console.cloud.google.com/ vào tạo một project mới trên Google Console
+
+ 
+
+Điền tên project và nhấn Create
+
+  
+Sau khi tạo project xong, ta tiến hành mở project vừa tạo
+
+ 
+
+Trong project vừa tạo, chọn APIs & Services  Enabled APIs & services
+
+ 
+
+ 
+Nhấn ENABLE APIS & SERVICES
+
+ 
+
+Tìm và chọn Maps SDK for Android
+
+ 
+ 
+Sau đó nhấn ENABLE Maps SDK for Android
+
+ 
+
+Trong mục APIs xuất hiện Maps SDK for Android trong Enabled APIs là thành công
+
+ 
+ 
+Tiếp theo ta sẽ tạo API Keys, vào mục Credentials chọn CREATE CREDENTIALS
+
+ 
+
+Chọn API key
+
+ 
+ 
+Sau khi tạo API key thành công, ta sẽ copy API key này và tiến hành cấu hình trong project
+
+ 
+
+Trong AndroidManifest, mục application ta thêm thẻ meta-data sau:
+
+<meta-data
+    android:name="com.google.android.geo.API_KEY"
+    android:value="APIKey_tạo_ở_bước_trên" />
+
+Trong đó value là API tạo ở bước trên
+
+ 
+
+ 
+Và khai báo một số quyền cần sử dụng
+
+<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+
+ 
+
+Trong build.gradle (Module) thêm thư viện play-services-maps
+
+implementation 'com.google.android.gms:play-services-maps:18.1.0'
+
+ 
+
+Trong layout thiết kế giao diện như sau:
+
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <fragment
+        android:id="@+id/map"
+        android:name="com.google.android.gms.maps.SupportMapFragment"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+</LinearLayout>
+
+ 
+Trong Activity kế thừa FragmentActivity và implement phương thức OnMapReadyCallback và viết xử lý chức năng như bên dưới
+
+public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
+
+    private GoogleMap mMap;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_maps);
+
+        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
+                .findFragmentById(R.id.map);
+        mapFragment.getMapAsync(this);
+    }
+
+    @Override
+    public void onMapReady(GoogleMap googleMap) {
+        mMap = googleMap;
+
+        LatLng hcm = new LatLng(10.7553411, 106.415029);
+        mMap.addMarker(new MarkerOptions().position(hcm).title("Tp.HCM"));
+        mMap.moveCamera(CameraUpdateFactory.newLatLng(hcm));
+    }
+}
+
+Ta được kết quả như bên dưới:
+
+ 
+ 
+XỬ LÝ THÊM CHỨC NĂNG
+
+1.	Thêm nhiều marker địa điểm trên google map
+
+Trong hàm onMapReady thêm một hoặc nhiều marker để hiển thị trên google map
+
+@Override
+public void onMapReady(GoogleMap googleMap) {
+    mMap = googleMap;
+
+    LatLng hcm = new LatLng(10.7553411, 106.415029);
+    mMap.addMarker(new MarkerOptions().position(hcm).title("Tp.HCM"));
+    mMap.moveCamera(CameraUpdateFactory.newLatLng(hcm));
+
+    LatLng hn = new LatLng(20.9740874, 105.3724793);
+    mMap.addMarker(new MarkerOptions().position(hn).title("Hà Nội"));
+}
+
+Ta được kết quả:
+
+ 
+ 
+2.	Di chuyển camera khi click vào marker trên google map
+
+Trong hàm onMapReady gọi sự kiện setOnMarkerClickListener của GoogleMap
+
+@Override
+public void onMapReady(GoogleMap googleMap) {
+    mMap = googleMap;
+
+    LatLng hcm = new LatLng(10.7553411, 106.415029);
+    mMap.addMarker(new MarkerOptions().position(hcm).title("Tp.HCM"));
+    mMap.moveCamera(CameraUpdateFactory.newLatLng(hcm));
+
+    LatLng hn = new LatLng(20.9740874, 105.3724793);
+    mMap.addMarker(new MarkerOptions().position(hn).title("Hà Nội"));
+
+
+    mMap.setOnMarkerClickListener(new GoogleMap.OnMarkerClickListener() {
+        @Override
+        public boolean onMarkerClick(@NonNull Marker marker) {
+            CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(marker.getPosition(), 15);
+            marker.showInfoWindow();
+            mMap.animateCamera(cameraUpdate, 500, null);
+            return true;
+        }
+    });
+}
+
+Lưu ý:
+	15 là độ zoom của camera
+	500 là thời gian thực hiện animate zoom
+
+ 
+3.	Hiển thị vị trí hiện tại trên google map
+
+Trong build.gradle (Module) thêm thư viện play-services-location
+
+implementation 'com.google.android.gms:play-services-location:20.0.0'
+
+ 
+
+Áp dụng Lab 05 định vị người dùng ta thực hiện như sau:
+Trong onCreate tạo hàm getLocation
+
+private void getLocation() {
+    if (ActivityCompat.checkSelfPermission(this,
+            Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+        //Yêu cầu người dùng cấp quyền truy cập locction khi chưa được phép
+        ActivityCompat.requestPermissions(this,
+                new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 7979);
+    } else {
+        //Thực hiện việc lấy location sau khi đã có quyền
+        mFusedLocationClient.getLastLocation().addOnSuccessListener(
+                new OnSuccessListener<Location>() {
+                    @Override
+                    public void onSuccess(Location location) {
+                        if (ActivityCompat.checkSelfPermission(MapsActivity.this,
+                                Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
+                                && ActivityCompat.checkSelfPermission(MapsActivity.this,
+                                Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                            return;
+                        }
+                        mMap.setMyLocationEnabled(true);
+                    }
+                });
+    }
+}
+
+Tạo hàm onRequestPermissionsResult để kiểm tra trạng thái cấp quyền
+
+@Override
+public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+    super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+    if (requestCode == 7979) {
+        if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            getLocation();
+        } else {
+            Toast.makeText(this, "Từ chối", Toast.LENGTH_SHORT).show();
+        }
+    }
+}
+
+ 
+Gọi hàm getLocation trong onCreate
+
+@Override
+protected void onCreate(Bundle savedInstanceState) {
+    super.onCreate(savedInstanceState);
+    setContentView(R.layout.activity_maps);
+
+    mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+
+    SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
+            .findFragmentById(R.id.map);
+    mapFragment.getMapAsync(this);
+
+    getLocation();
+}
+
+Ta được kết quả
+
+ 
+
+
+Chúc các bạn thành công <3
+DinhNT
+
+✨Group hỏi đáp: https://www.facebook.com/groups/anhthayvadongbon
+✨Website: https://dinhnt.com/
+✨Youtube: https://www.youtube.com/c/anhThầy 
+✨Fanpage: https://www.facebook.com/dinhntcom
+✨Instagram: https://www.instagram.com/dinhnt_at
+
+
